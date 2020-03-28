@@ -70,7 +70,7 @@ export default {
       this.show = false
     },
     change(val) {
-      this.$router.push(val.path)
+      this.$router.push(val.path).catch(() => {})
       this.search = ''
       this.options = []
       this.$nextTick(() => {
@@ -130,7 +130,8 @@ export default {
     },
     querySearch(query) {
       if (query !== '') {
-        this.options = this.fuse.search(query)
+        const fuseOptions = this.fuse.search(query)
+        this.options = fuseOptions.map(fuseOption => fuseOption.item)
       } else {
         this.options = []
       }
