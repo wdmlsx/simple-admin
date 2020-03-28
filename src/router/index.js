@@ -67,13 +67,13 @@ export const constantRoutes = [
   {
     path: '/',
     component: Layout,
-    redirect: '/dashboard',
+    redirect: '/DeviceManager',
     children: [
       {
-        path: 'dashboard',
+        path: 'deviceManager',
         component: () => import('@/views/theme/index'),
         name: 'Dashboard',
-        meta: { title: 'Dashboard', icon: 'theme', affix: true }
+        meta: { title: 'DeviceManager', icon: 'theme', affix: true }
       }
     ]
   }
