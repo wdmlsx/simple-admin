@@ -27,7 +27,21 @@
         <g id="topology-portLabel" />
       </g>
     </svg>
-    <div class="over">
+    <div class="tools">
+      <ul>
+        <li>
+          <button class="circle" @click="buttonCtr">
+            <svg-icon icon-class="theme" />
+          </button>
+        </li>
+        <li>
+          <button class="circle" @click="restTranslate">
+            <svg-icon icon-class="theme" />
+          </button>
+        </li>
+      </ul>
+    </div>
+    <div id="router" class="over">
       <div class="menu-net">
         <el-table :data="routeList" border>
           <el-table-column type="index" align="center" label="#" />
@@ -46,6 +60,7 @@ import resize from './mixins/resize'
 import dataAPI from './data/device'
 
 import * as d3 from 'd3'
+
 export default {
   name: 'Topology',
   mixins: [resize],
@@ -55,7 +70,8 @@ export default {
       links: [],
       simulation: undefined,
       interval: {
-        rectIntervalShrink: undefined
+        rectIntervalShrink: undefined,
+        panelInterval: undefined
       },
       routeList: [
         {
@@ -74,7 +90,15 @@ export default {
           src: '10.10.10.10/24',
           dst: '10.10.10.14/12'
         }
-      ]
+      ],
+      panelCtr: false,
+      fixCtr: false,
+      test: false,
+      transform: {
+        k: 1,
+        x: 0,
+        y: 0
+      }
     }
   },
   created() {
@@ -87,6 +111,7 @@ export default {
       this.keyboardEvent()
       this.lineEvent()
       this.svgEvent()
+      this.hiddenPanel()
     })
   },
   methods: {
@@ -247,6 +272,11 @@ export default {
         .attr('id', (d, i) => 'line' + i)
 
       this.simulation.nodes(this.nodes).on('tick', () => {
+        // console.log('d: ', this.nodes)
+        // this.nodes.forEach(node => {
+        //   node.fx = node.x
+        //   node.fy = node.y
+        // })
         node.attr('transform', d => `translate(${d.x}, ${d.y})`)
         paths.attr('d', d => {
           const asix = this.getLineAsix(d)
@@ -257,9 +287,13 @@ export default {
 
       this.simulation.force('link').links(this.links)
 
-      d3.select('#topology-container').attr('cursor', 'grab').call(d3.zoom().extent([[0, 0], [this.$data.svgSize.width, this.$data.svgSize.height]]).on('zoom', () => {
-        d3.select('#topology-zoom').attr('transform', d3.event.transform)
-      }), d3.zoomIdentity)
+      d3.select('#topology-container')
+        .attr('cursor', 'grab')
+        .call(d3.zoom().extent([[0, 0], [this.$data.svgSize.width, this.$data.svgSize.height]])
+          .on('zoom', () => {
+            this.transform = d3.event.transform
+            d3.select('#topology-zoom').attr('transform', d3.event.transform)
+          }), d3.zoomIdentity)
     },
 
     lineEvent() {
@@ -267,6 +301,8 @@ export default {
       const paths = d3.select('#topology-zoom').select('#topology-links').selectAll('.link')
       const node = d3.select('#topology-zoom').select('#topology-nodes').selectAll('.node')
       node.on('click', function(d) {
+        d3.event.stopPropagation()
+        // d3.event.defaultPrevented = true
         const preNode = d3.select('#topology-zoom').select('#topology-nodes').select('.node-click').classed('node-click', false)
         d3.select(this).select('rect').classed('node-click', preNode.nodes().length === 0 || Object.values(preNode.nodes()[0])[0].id !== d.id)
       })
@@ -282,7 +318,7 @@ export default {
 
     svgEvent() {
       d3.select('#topology-container').on('click', function() {
-        console.log('svg click......')
+        d3.select('#topology-zoom').select('#topology-nodes').selectAll('.node').select('rect').classed('node-click', false)
       })
     },
 
@@ -292,6 +328,35 @@ export default {
         // console.log('key: ', key)
         if (/^[lL]$/.test(key) && !this.interval.rectIntervalShrink) {
           this.switchLabelHandler()
+        }
+        if (/^[pP]$/.test(key) && !this.interval.panelInterval) {
+          this.buttonCtr()
+        }
+        if (/^[fF]$/.test(key)) {
+          if (this.fixCtr) {
+            // this.nodes = this.nodes.map(node => {
+            //   delete node.fx
+            //   delete node.fy
+            //   return node
+            // })
+            this.nodes.forEach(node => {
+              delete node.fx
+              delete node.fy
+            })
+          } else {
+            this.nodes.forEach(node => {
+              node.fx = node.x
+              node.fy = node.y
+            })
+          }
+          this.fixCtr = !this.fixCtr
+        }
+        if (/^[rR]$/.test(key)) {
+          this.transform.k = 1
+          this.transform.x = 0
+          this.transform.y = 0
+
+          d3.select('#topology-zoom').attr('transform', this.transform)
         }
       })
     },
@@ -526,6 +591,56 @@ export default {
           target: targetRect
         }
       }
+    },
+
+    hiddenPanel() {
+      if (!this.panelCtr) {
+        console.log('hehehhehhehhe')
+        const x = document.getElementById('router')
+        const width = x.offsetWidth
+        d3.select('#router').style('right', (0 - width) + 'px')
+      }
+    },
+
+    buttonCtr() {
+      if (!this.interval.panelInterval) {
+        const x = document.getElementById('router')
+        const width = x.offsetWidth
+        if (this.panelCtr) {
+          let offset = 0
+          this.interval.panelInterval = setInterval(() => {
+            if (Math.abs(offset) >= width) {
+              d3.select('#router').style('right', (0 - width) + 10 + 'px')
+              clearInterval(this.interval.panelInterval)
+              this.interval.panelInterval = undefined
+            } else {
+              offset -= 50
+              d3.select('#router').style('right', offset + 'px')
+            }
+          }, 20)
+        } else {
+          let offset = 0 - width
+          this.interval.panelInterval = setInterval(() => {
+            if (offset >= 0) {
+              d3.select('#router').style('right', 0)
+              clearInterval(this.interval.panelInterval)
+              this.interval.panelInterval = undefined
+            } else {
+              offset += 50
+              d3.select('#router').style('right', offset + 'px')
+            }
+          }, 20)
+        }
+        this.panelCtr = !this.panelCtr
+      }
+    },
+
+    restTranslate() {
+      console.log('transform: ', this.transform)
+      this.transform.k = 1
+      this.transform.x = 0
+      this.transform.y = 0
+      d3.select('#topology-zoom').attr('transform', this.transform)
     }
   }
 }
@@ -556,5 +671,35 @@ export default {
     padding: .5em 1em;
     position: relative;
   }
-
+  .tools {
+    bottom: 3em;
+    position: absolute;
+    right: 4em;
+    text-align: center;
+    z-index: 101;
+  }
+  .tools ul button {
+    height: 3em;
+    padding: 0;
+    width: 3em;
+  }
+  .tools ul {
+    display: block;
+    list-style: none;
+    margin: 0 3em 0.5em 0;
+    padding: 0;
+  }
+  .tools ul li {
+    display: inline;
+    margin-left: 50px;
+  }
+  .circle {
+    border: 2px solid #1AAD8D;
+    border-radius: 50%;
+    font-weight: 700;
+    box-shadow: none;
+    outline: 0;
+    background-color: #ffffff;
+    cursor: pointer;
+  }
 </style>
