@@ -134,6 +134,18 @@ export const asyncRoutes = [
       }
     ]
   },
+  {
+    path: '/topology',
+    component: Layout,
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/jd/d3/topology'),
+        name: 'Topology',
+        meta: { title: 'Theme', icon: 'theme' }
+      }
+    ]
+  },
   // 404 page must be placed at the end !!!
   { path: '*', redirect: '/404', hidden: true }
 ]
