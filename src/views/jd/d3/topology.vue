@@ -36,7 +36,7 @@
         </li>
         <li>
           <button class="circle" @click="restTranslate">
-            <svg-icon icon-class="theme" />
+            <svg-icon icon-class="pin" />
           </button>
         </li>
       </ul>
@@ -615,7 +615,7 @@ export default {
       if (!this.panelCtr) {
         const x = document.getElementById('router')
         const width = x.offsetWidth
-        d3.select('#router').style('right', (0 - width) + 'px')
+        d3.select('#router').style('right', (0 - width + 10) + 'px')
       }
     },
 
