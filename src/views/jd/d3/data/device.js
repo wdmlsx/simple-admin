@@ -316,5 +316,251 @@ export default {
         type: 'wireless'
       }
     ]
+  },
+  routerList() {
+    return [
+      {
+        key: {
+          src: '10.10.10.10',
+          dst: '10.10.10.19'
+        },
+        links: [
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.10',
+                port: '2'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.12',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          },
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.12',
+                port: '4'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.19',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          }
+        ]
+      },
+      {
+        key: {
+          src: '10.10.10.18',
+          dst: '10.10.10.22'
+        },
+        links: [
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.12',
+                port: '3'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.18',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          },
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.10',
+                port: '2'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.12',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          },
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.10',
+                port: '3'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.13',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          },
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.13',
+                port: '7'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.22',
+                port: '4'
+              }
+            },
+            type: 'wireless'
+          }
+        ]
+      },
+      {
+        key: {
+          src: '10.10.10.15',
+          dst: '10.10.10.22'
+        },
+        links: [
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.11',
+                port: '3'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.15',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          },
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.10',
+                port: '1'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.11',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          },
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.10',
+                port: '3'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.13',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          },
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.13',
+                port: '6'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.22',
+                port: '3'
+              }
+            },
+            type: 'wireless'
+          }
+        ]
+      },
+      {
+        key: {
+          src: '10.10.10.17',
+          dst: '10.10.10.21'
+        },
+        links: [
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.12',
+                port: '2'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.17',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          },
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.10',
+                port: '2'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.12',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          },
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.10',
+                port: '3'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.13',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          },
+          {
+            src: {
+              key: {
+                deviceId: 'device:10.10.10.13',
+                port: '3'
+              }
+            },
+            dst: {
+              key: {
+                deviceId: 'device:10.10.10.21',
+                port: '1'
+              }
+            },
+            type: 'wireless'
+          }
+        ]
+      }
+    ]
   }
 }

@@ -142,7 +142,19 @@ export const asyncRoutes = [
         path: 'index',
         component: () => import('@/views/jd/d3/topology'),
         name: 'Topology',
-        meta: { title: 'Theme', icon: 'theme' }
+        meta: { title: 'Topology', icon: 'theme' }
+      }
+    ]
+  },
+  {
+    path: '/device',
+    component: Layout,
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/jd/device/index'),
+        name: 'DeviceLink',
+        meta: { title: 'DeviceManager', icon: 'theme' }
       }
     ]
   },

@@ -43,11 +43,18 @@
     </div>
     <div id="router" class="over">
       <div class="menu-net">
-        <el-table :data="routeList" border>
+        <el-table
+          :data="routeList"
+          :header-row-style="style.tableHead"
+          :row-class-name="() => 'customHover'"
+          :row-style="handleTableRow"
+          :show-header="false"
+          border
+          @row-click="handleRouteSelect"
+        >
           <el-table-column type="index" align="center" label="#" />
           <el-table-column prop="src" width="250px" align="center" label="node1" />
           <el-table-column prop="dst" width="250px" align="center" label="node2" />
-          <!---->
         </el-table>
       </div>
     </div>
@@ -75,20 +82,20 @@ export default {
       },
       routeList: [
         {
-          src: '10.10.10.10/24',
-          dst: '10.10.10.14/12'
+          src: '10.10.10.10/10',
+          dst: '10.10.10.14/19'
         },
         {
-          src: '10.10.10.10/24',
-          dst: '10.10.10.14/12'
+          src: '10.10.10.10/18',
+          dst: '10.10.10.14/22'
         },
         {
-          src: '10.10.10.10/24',
-          dst: '10.10.10.14/12'
+          src: '10.10.10.10/15',
+          dst: '10.10.10.14/22'
         },
         {
-          src: '10.10.10.10/24',
-          dst: '10.10.10.14/12'
+          src: '10.10.10.10/17',
+          dst: '10.10.10.14/21'
         }
       ],
       panelCtr: false,
@@ -98,7 +105,18 @@ export default {
         k: 1,
         x: 0,
         y: 0
-      }
+      },
+      style: {
+        tableHead: {
+          'color': 'black!important',
+          'background-color': '#c4d4d0!important'
+        },
+        tableRow: {
+          'background-color': '#c4d4d0!important',
+          'color': 'black'
+        }
+      },
+      selectedPath: ''
     }
   },
   created() {
@@ -152,11 +170,16 @@ export default {
       this.links = Object.values(linkArrMap).reduce((pre, cur) => {
         return pre.concat(cur)
       }, [])
-      // console.log(JSON.stringify(this.links))
+
+      this.routeList = dataAPI.routerList().map(router => {
+        return {
+          src: router.key.src,
+          dst: router.key.dst,
+          links: router.links
+        }
+      })
     },
     simulationInit() {
-      // console.log('width: ', this.$data.svgSize.width)
-      // console.log('height: ', this.$data.svgSize.height)
       this.simulation = d3.forceSimulation()
         .force('link', d3.forceLink()
           .id(d => d.id)
@@ -272,15 +295,33 @@ export default {
         .attr('id', (d, i) => 'line' + i)
 
       this.simulation.nodes(this.nodes).on('tick', () => {
-        // console.log('d: ', this.nodes)
-        // this.nodes.forEach(node => {
-        //   node.fx = node.x
-        //   node.fy = node.y
-        // })
         node.attr('transform', d => `translate(${d.x}, ${d.y})`)
         paths.attr('d', d => {
+          const { src, dst } = this.linkId(d)
+          const axis_selected = this.initLinePortNumberAxis(d)
+          const sourceNumLen = d.sourcePort >= 1220 ? 4 : d.sourcePort - 9 > 0 ? 2 : 1
+          const targetNumLen = d.targetPort >= 1220 ? 4 : d.targetPort - 9 > 0 ? 2 : 1
+          if (!d3.select('#' + 'rect-' + src).empty()) {
+            d3.select('#' + 'rect-' + src)
+              .attr('x', sourceNumLen === 2 ? axis_selected.source.x - 10 : sourceNumLen === 1 ? axis_selected.source.x - 5 : axis_selected.source.x - 20)
+              .attr('y', axis_selected.source.y - 10)
+          }
+          if (!d3.select('#' + 'rect-' + dst).empty()) {
+            d3.select('#' + 'rect-' + dst)
+              .attr('x', targetNumLen === 2 ? axis_selected.target.x - 10 : targetNumLen === 1 ? axis_selected.target.x - 5 : axis_selected.target.x - 20)
+              .attr('y', axis_selected.target.y - 10)
+          }
+          if (!d3.select('#' + 'text-' + src).empty()) {
+            d3.select('#' + 'text-' + src)
+              .attr('x', sourceNumLen === 2 ? axis_selected.source.x - 10 : sourceNumLen === 1 ? axis_selected.source.x - 5 : axis_selected.source.x - 20)
+              .attr('y', axis_selected.source.y)
+          }
+          if (!d3.select('#' + 'text-' + dst).empty()) {
+            d3.select('#' + 'text-' + dst)
+              .attr('x', targetNumLen === 2 ? axis_selected.target.x - 10 : targetNumLen === 1 ? axis_selected.target.x - 5 : axis_selected.target.x - 20)
+              .attr('y', axis_selected.target.y)
+          }
           const asix = this.getLineAsix(d)
-          // return 'M ' + d.source.x + ', ' + d.source.y + ' L ' + d.target.x + ', ' + d.target.y
           return `M ${asix.source.x} ${asix.source.y} L ${asix.target.x} ${asix.target.y}`
         })
       })
@@ -458,96 +499,73 @@ export default {
     /*
    * 鼠标移出隐藏端口号
    * */
-    removePortNum() {
-      d3.select('#topology-portLabel').selectAll('g').remove()
+    removePortNum(selected = false) {
+      if (selected) {
+        d3.select('#topology-portLabel').selectAll('g').remove()
+      } else {
+        d3.select('#topology-portLabel').selectAll('.selected').selectAll(function() {
+          return [
+            this.previousElementSibling,
+            this.nextElementSibling
+          ]
+        }).remove()
+      }
     },
 
-    showPortNum(line) {
-      // console.log('showPortline: ', line)
+    showPortNum(line, selected = false) {
       const axis = this.initLinePortNumberAxis(line)
       const el = d3.select('#topology-portLabel')
         .attr('transform', 'scale(1)')
       const elSource = el.append('g')
       const elTarget = el.append('g')
       const sourceNumLen = line.sourcePort >= 1220 ? 4 : line.sourcePort - 9 > 0 ? 2 : 1
-      elSource.append('rect')
-        // .attr({
-        //   'width': line => {
-        //     return sourceNumLen === 2 ? 20 : sourceNumLen === 1 ? 10 : 40
-        //   },
-        //   'height': 20,
-        //   'x': sourceNumLen === 2 ? axis.source.x - 10 : sourceNumLen === 1 ? axis.source.x - 5 : axis.source.x - 20,
-        //   'y': axis.source.y - 10,
-        //   'rx': 5,
-        //   'ry': 5
-        // })
+
+      const sourceRect = elSource.append('rect')
         .attr('width', sourceNumLen === 2 ? 20 : sourceNumLen === 1 ? 10 : 40)
         .attr('height', 20)
         .attr('x', sourceNumLen === 2 ? axis.source.x - 10 : sourceNumLen === 1 ? axis.source.x - 5 : axis.source.x - 20)
         .attr('y', axis.source.y - 10)
         .attr('rx', 5)
         .attr('ry', 5)
-        // .style({
-        //   'fill': '#FFFFFF',
-        //   'stroke': '#969696',
-        //   'stroke-width': 1
-        // })
-        .style('fill', '#FFFFFF')
         .style('stroke', '#969696')
         .style('stroke-width', 1)
-      elSource.append('text')
-        // .attr({
-        //   'text-anchor': 'right',
-        //   'x': sourceNumLen === 2 ? axis.source.x - 10 : sourceNumLen === 1 ? axis.source.x - 5 : axis.source.x - 20,
-        //   'y': axis.source.y,
-        //   'dy': '0.3em'
-        // })
+        .classed('selected', !selected)
+
+      const sourceText = elSource.append('text')
         .attr('text-anchor', 'right')
         .attr('x', sourceNumLen === 2 ? axis.source.x - 10 : sourceNumLen === 1 ? axis.source.x - 5 : axis.source.x - 20)
         .attr('y', axis.source.y)
         .attr('dy', '0.3em')
         .text(line.sourcePort)
+        .classed('selected', !selected)
 
       // 如果出端口小于0表示出端口链接了一台host
       if (line.type === 'wireless') {
-        var targetNumLen = line.targetPort >= 1220 ? 4 : line.targetPort - 9 > 0 ? 2 : 1
-        elTarget.append('rect')
-          // .attr({
-          //   'width': node => {
-          //     return targetNumLen === 2 ? 20 : targetNumLen === 1 ? 10 : 40
-          //   },
-          //   'height': 20,
-          //   'x': targetNumLen === 2 ? axis.target.x - 10 : targetNumLen === 1 ? axis.target.x - 5 : axis.target.x - 20,
-          //   'y': axis.target.y - 10,
-          //   'rx': 5,
-          //   'ry': 5
-          // })
+        const targetNumLen = line.targetPort >= 1220 ? 4 : line.targetPort - 9 > 0 ? 2 : 1
+        const targetRect = elTarget.append('rect')
           .attr('width', targetNumLen === 2 ? 20 : targetNumLen === 1 ? 10 : 40)
           .attr('height', 20)
           .attr('x', targetNumLen === 2 ? axis.target.x - 10 : targetNumLen === 1 ? axis.target.x - 5 : axis.target.x - 20)
           .attr('y', axis.target.y - 10)
           .attr('rx', 5)
           .attr('ry', 5)
-          // .style({
-          //   'fill': '#FFFFFF',
-          //   'stroke': '#969696',
-          //   'stroke-width': 1
-          // })
-          .style('fill', '#FFFFFF')
           .style('stroke', '#969696')
           .style('stroke-width', 1)
-        elTarget.append('text')
-          // .attr({
-          //   'text-anchor': 'right',
-          //   'x': targetNumLen === 2 ? axis.target.x - 10 : targetNumLen === 1 ? axis.target.x - 5 : axis.target.x - 20,
-          //   'y': axis.target.y,
-          //   'dy': '0.3em'
-          // })
+          .classed('selected', !selected)
+
+        const targetText = elTarget.append('text')
           .attr('text-anchor', 'right')
           .attr('x', targetNumLen === 2 ? axis.target.x - 10 : targetNumLen === 1 ? axis.target.x - 5 : axis.target.x - 20)
           .attr('y', axis.target.y)
           .attr('dy', '0.3em')
           .text(line.targetPort)
+          .classed('selected', !selected)
+
+        const { src, dst } = this.linkId(line)
+        sourceRect.attr('id', () => selected ? 'rect-' + src : '').style('fill', () => selected ? '#1AAD8D' : '#FFFFFF')
+        sourceText.attr('id', () => selected ? 'text-' + src : '').style('fill', () => selected ? '#FFFFFF' : '#000000')
+        targetRect.attr('id', () => selected ? 'rect-' + dst : '').style('fill', () => selected ? '#1AAD8D' : '#FFFFFF')
+        targetText.attr('id', () => selected ? 'text-' + dst : '').style('fill', () => selected ? '#FFFFFF' : '#000000')
       }
     },
 
@@ -595,7 +613,6 @@ export default {
 
     hiddenPanel() {
       if (!this.panelCtr) {
-        console.log('hehehhehhehhe')
         const x = document.getElementById('router')
         const width = x.offsetWidth
         d3.select('#router').style('right', (0 - width) + 'px')
@@ -636,11 +653,63 @@ export default {
     },
 
     restTranslate() {
-      console.log('transform: ', this.transform)
       this.transform.k = 1
       this.transform.x = 0
       this.transform.y = 0
       d3.select('#topology-zoom').attr('transform', this.transform)
+    },
+    handleRouteSelect(row, column, event) {
+      const src = row.src
+      const dst = row.dst
+      if ((this.selectedPath === src + dst) || (this.selectedPath === dst + src)) {
+        d3.selectAll('.path-select').classed('path-select', false)
+        this.removePortNum(true)
+        this.selectedPath = ''
+      } else {
+        this.selectedPath = src + dst
+        const links = []
+        for (const link of row.links) {
+          const srcDeviceId = link.src.key.deviceId
+          const srcPort = link.src.key.port
+          const dstDeviceId = link.dst.key.deviceId
+          const dstPort = link.dst.key.port
+          for (const d of this.links) {
+            const dSrcDeviceId = d.source.id
+            const dSrcPort = d.sourcePort
+            const dDstDeviceId = d.target.id
+            const dDstPrt = d.targetPort
+            if ((dSrcDeviceId === srcDeviceId && dSrcPort === srcPort && dDstDeviceId === dstDeviceId && dDstPrt === dstPort) || (dSrcDeviceId === dstDeviceId && dSrcPort === dstPort && dDstDeviceId === srcDeviceId && dDstPrt === srcPort)) {
+              links.push('#line' + d.index)
+            }
+          }
+        }
+        d3.selectAll('.path-select').classed('path-select', false)
+        this.removePortNum(true)
+        for (const id of links) {
+          d3.select(id).classed('path-select', d => {
+            this.showPortNum(d, true)
+            return true
+          })
+        }
+      }
+    },
+    linkId(link) {
+      const srcDeviceId = link.source.id.replace(/[:.]/g, '-')
+      const dstDeviceId = link.target.id.replace(/[:.]/g, '-')
+      return {
+        src: srcDeviceId + '-' + link.sourcePort,
+        dst: dstDeviceId + '-' + link.targetPort
+      }
+    },
+    handleTableRow({ row }) {
+      if ((this.selectedPath === row.src + row.dst) || (this.selectedPath === row.dst + row.src)) {
+        return {
+          'background-color': '#1AAD8D!important',
+          'color': 'white'
+        }
+      } else {
+        return this.style.tableRow
+      }
     }
   }
 }
@@ -664,8 +733,8 @@ export default {
   }
   .menu-net {
     background-color: #acd2ca;
-    border: 2px solid #127862;
-    /*border-radius: .5em;*/
+    /*border: 2px solid #127862;*/
+    border-radius: .5em;
     border-width: 6px 2px 3px;
     margin-bottom: 2em;
     padding: .5em 1em;
@@ -701,5 +770,24 @@ export default {
     outline: 0;
     background-color: #ffffff;
     cursor: pointer;
+  }
+  .path-select {
+    stroke: #1AAD8D;
+    stroke-width: 5;
+  }
+  .el-table .customHover {
+    cursor: pointer;
+  /*  */
+  }
+  .el-table .el-table__body-wrapper .customHover:hover>td {
+    background: none!important;
+  }
+</style>
+<style scoped>
+  .table-head {
+    background-color: #c4d4d0!important;
+  }
+  .table-row {
+    background: #127862;
   }
 </style>
