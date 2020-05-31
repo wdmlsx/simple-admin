@@ -25,22 +25,44 @@
         <g id="topology-links" />
         <g id="topology-nodes" />
         <g id="topology-portLabel" />
+        <g id="topology-lines" />
+        <g id="topology-links-label" />
       </g>
     </svg>
-    <div class="tools">
-      <ul>
-        <li>
-          <button class="circle" @click="buttonCtr">
-            <svg-icon icon-class="theme" />
-          </button>
-        </li>
-        <li>
-          <button class="circle" @click="restTranslate">
-            <svg-icon icon-class="pin" />
-          </button>
-        </li>
-      </ul>
+    <!--
+      功能面板
+    -->
+    <div class="menu-box">
+      <div class="menu-net">
+        <div class="tools">
+          <ul>
+            <li>
+              <el-button type="primary" @click="buttonCtr">
+                <svg-icon icon-class="theme" />
+              </el-button>
+              <!--<button class="circle" @click="buttonCtr">
+              </button>-->
+            </li>
+            <li>
+              <el-button type="primary" @click="restTranslate">
+                <svg-icon icon-class="pin" />
+              </el-button>
+              <!--<button class="circle" @click="restTranslate">
+                <svg-icon icon-class="pin" />
+              </button>-->
+            </li>
+            <li>
+              <el-button type="warning" @click="testAddLink">
+                addLink
+              </el-button>
+            </li>
+          </ul>
+        </div>
+      </div>
     </div>
+    <!--
+      路由表格
+    -->
     <div id="router" class="over">
       <div class="menu-net">
         <el-table
@@ -53,8 +75,8 @@
           @row-click="handleRouteSelect"
         >
           <el-table-column type="index" align="center" label="#" />
-          <el-table-column prop="src" width="250px" align="center" label="node1" />
-          <el-table-column prop="dst" width="250px" align="center" label="node2" />
+          <el-table-column prop="src" width="150px" align="center" label="node1" />
+          <el-table-column prop="dst" width="150px" align="center" label="node2" />
         </el-table>
       </div>
     </div>
@@ -80,24 +102,7 @@ export default {
         rectIntervalShrink: undefined,
         panelInterval: undefined
       },
-      routeList: [
-        {
-          src: '10.10.10.10/10',
-          dst: '10.10.10.14/19'
-        },
-        {
-          src: '10.10.10.10/18',
-          dst: '10.10.10.14/22'
-        },
-        {
-          src: '10.10.10.10/15',
-          dst: '10.10.10.14/22'
-        },
-        {
-          src: '10.10.10.10/17',
-          dst: '10.10.10.14/21'
-        }
-      ],
+      routeList: [],
       panelCtr: false,
       fixCtr: false,
       test: false,
@@ -126,6 +131,7 @@ export default {
     this.$nextTick(() => {
       this.simulationInit()
       this.initLinks()
+      this.initMarker()
       this.keyboardEvent()
       this.lineEvent()
       this.svgEvent()
@@ -166,9 +172,22 @@ export default {
           return link
         })
       }
+      // console.log('links: ', JSON.stringify(this.links))
 
       this.links = Object.values(linkArrMap).reduce((pre, cur) => {
         return pre.concat(cur)
+      }, []).reduce((pre, cur) => {
+        const { source, target, sourcePort, targetPort, type, detail } = cur
+        pre.push(cur)
+        pre.push({
+          source: target,
+          target: source,
+          sourcePort: targetPort,
+          targetPort: sourcePort,
+          type,
+          detail
+        })
+        return pre
       }, [])
 
       this.routeList = dataAPI.routerList().map(router => {
@@ -179,6 +198,7 @@ export default {
         }
       })
     },
+
     simulationInit() {
       this.simulation = d3.forceSimulation()
         .force('link', d3.forceLink()
@@ -188,53 +208,6 @@ export default {
           d3.forceManyBody().strength(-700))
         .force('center',
           d3.forceCenter(this.$data.svgSize.width / 2, this.$data.svgSize.height / 2))
-    },
-    initNodes() {
-      const node = d3.select('#topology-zoom').select('#topology-nodes').selectAll('.node')
-        .data(this.nodes)
-        .enter()
-        .append('g')
-        .classed('node', true)
-        .call(d3.drag().on('drag', d => {
-          d.fx = d3.event.x
-          d.fy = d3.event.y
-        }).on('start', d => {
-          if (!d3.event.active) this.simulation.alphaTarget(0.3).restart()
-          d.fy = d.y
-          d.fx = d.x
-        }))
-
-      node.append('rect')
-        .attr('width', 36)
-        .attr('height', 36)
-        .attr('x', -18)
-        .attr('y', -18)
-        .attr('fill', '#FFFFFF')
-        .classed('outer', true)
-
-      node.append('rect')
-        .attr('width', 32)
-        .attr('height', 32)
-        .attr('x', -16)
-        .attr('y', -16)
-        .attr('fill', 'rgb(91, 153, 210)')
-        .classed('inner', true)
-
-      node.append('use')
-        .attr('href', '#switch')
-        .attr('width', 36)
-        .attr('height', 36)
-        .attr('x', -18)
-        .attr('y', -18)
-        .attr('fill', '#EEEEEE')
-        .classed('outer', true)
-
-      node.append('text')
-        .attr('txt-anchor', 'left')
-        .attr('x', 22)
-        .attr('y', '0.3em')
-        .style('transform', 'scale(1)')
-        .classed('inner', true)
     },
 
     initLinks() {
@@ -294,6 +267,27 @@ export default {
         .attr('stroke-width', 2)
         .attr('id', (d, i) => 'line' + i)
 
+      const linksLabels = d3.select('#topology-zoom').select('#topology-links-label').selectAll('.linkLabel')
+        .data(this.links).enter()
+        .append('text')
+        .classed('linkLabel', true)
+        .style('pointer-events', 'none')
+        .attr('dy', '-0.5em')
+        .attr('dx', d => {
+          return (d.detail.index + 1.5) + 'em'
+        })
+        .attr('id', d => this.labelId(d))
+        .attr('font-size', '1em')
+        .attr('fill', '#127862')
+        .classed('node-hidden', true)
+
+      linksLabels.append('textPath')
+        .attr('xlink:href', (d, i) => '#line' + i)
+        .style('text-anchor', 'middle')
+        .style('pointer-events', 'none')
+        .attr('startOffset', '50%')
+        .text(d => d.type)
+
       this.simulation.nodes(this.nodes).on('tick', () => {
         node.attr('transform', d => `translate(${d.x}, ${d.y})`)
         paths.attr('d', d => {
@@ -321,7 +315,16 @@ export default {
               .attr('x', targetNumLen === 2 ? axis_selected.target.x - 10 : targetNumLen === 1 ? axis_selected.target.x - 5 : axis_selected.target.x - 20)
               .attr('y', axis_selected.target.y)
           }
+
           const asix = this.getLineAsix(d)
+          const lineId = this.lineId(d)
+          if (!d3.select('#' + lineId).empty()) {
+            d3.select('#' + lineId)
+              .attr('x1', asix.source.x)
+              .attr('y1', asix.source.y)
+              .attr('x2', asix.target.x)
+              .attr('y2', asix.target.y)
+          }
           return `M ${asix.source.x} ${asix.source.y} L ${asix.target.x} ${asix.target.y}`
         })
       })
@@ -350,9 +353,17 @@ export default {
       // console.log('paths: ', JSON.stringify(paths))
       paths.on('mouseover', function(d) {
         d3.select(this).classed('line-mouse-over', true)
+        if (d3.select('#topology-links-label').select('#' + that.labelId_reverse(d)).classed('node-hidden')) {
+          d3.select('#topology-links-label').select('#' + that.labelId(d)).classed('node-hidden', false).classed('mouseover', true)
+          d3.select('#topology-links-label').select('#' + that.labelId_reverse(d)).classed('node-hidden', false).classed('mouseover', true)
+        }
         that.showPortNum(d)
       }).on('mouseout', function(d) {
         d3.select(this).classed('line-mouse-over', false)
+        if (d3.select('#topology-links-label').select('#' + that.labelId(d)).classed('mouseover')) {
+          d3.select('#topology-links-label').select('#' + that.labelId(d)).classed('node-hidden', true).classed('mouseover', false)
+          d3.select('#topology-links-label').select('#' + that.labelId_reverse(d)).classed('node-hidden', true).classed('mouseover', false)
+        }
         that.removePortNum()
       })
     },
@@ -375,11 +386,6 @@ export default {
         }
         if (/^[fF]$/.test(key)) {
           if (this.fixCtr) {
-            // this.nodes = this.nodes.map(node => {
-            //   delete node.fx
-            //   delete node.fy
-            //   return node
-            // })
             this.nodes.forEach(node => {
               delete node.fx
               delete node.fy
@@ -393,7 +399,7 @@ export default {
           this.fixCtr = !this.fixCtr
         }
         if (/^[rR]$/.test(key)) {
-          this.transform.k = 1
+          // this.transform.k = 1
           this.transform.x = 0
           this.transform.y = 0
 
@@ -401,6 +407,7 @@ export default {
         }
       })
     },
+
     switchLabelHandler() {
       const that = this
       const elRect = d3.select('#topology-nodes').selectAll('.node').select('rect')
@@ -436,6 +443,7 @@ export default {
         }, 20)
       }
     },
+
     getLineAsix(line) {
       const axis = {
         source: {
@@ -482,14 +490,18 @@ export default {
       // total的取值范围 {1,}
       if (total % 2 === 0) { // 偶数条线
         //
-        axis.x = index % 2 === 0 ? (((3 + 6 * index / 2) * Math.sqrt(rate * rate + 1)) + (verticalOffset - offset)) / (rate + (1 / rate)) : (-((3 + (index - 1) * 6 / 2) * Math.sqrt(rate * rate + 1)) + (verticalOffset - offset)) / (rate + 1 / rate)
+        axis.x = index % 2 === 0
+          ? (((3 + 6 * index / 2) * Math.sqrt(rate * rate + 1)) + (verticalOffset - offset)) / (rate + (1 / rate))
+          : (-((3 + (index - 1) * 6 / 2) * Math.sqrt(rate * rate + 1)) + (verticalOffset - offset)) / (rate + 1 / rate)
         axis.y = (-1 / rate) * axis.x + verticalOffset
       } else {
         if (index === 0) {
           axis.x = pre.x
           axis.y = pre.y
         } else {
-          axis.x = index % 2 === 0 ? ((6 * index / 2 * Math.sqrt(rate * rate + 1)) + (verticalOffset - offset)) / (rate + 1 / rate) : ((-6 * (index + 1) / 2 * Math.sqrt(rate * rate + 1)) + (verticalOffset - offset)) / (rate + 1 / rate)
+          axis.x = index % 2 === 0
+            ? ((6 * index / 2 * Math.sqrt(rate * rate + 1)) + (verticalOffset - offset)) / (rate + 1 / rate)
+            : ((-6 * (index + 1) / 2 * Math.sqrt(rate * rate + 1)) + (verticalOffset - offset)) / (rate + 1 / rate)
           axis.y = (-1 / rate) * axis.x + verticalOffset
         }
       }
@@ -513,59 +525,61 @@ export default {
     },
 
     showPortNum(line, selected = false) {
-      const axis = this.initLinePortNumberAxis(line)
-      const el = d3.select('#topology-portLabel')
-        .attr('transform', 'scale(1)')
-      const elSource = el.append('g')
-      const elTarget = el.append('g')
-      const sourceNumLen = line.sourcePort >= 1220 ? 4 : line.sourcePort - 9 > 0 ? 2 : 1
+      const { src, dst } = this.linkId(line)
+      if (d3.select('#topology-portLabel').select('#' + 'rect-' + src).empty()) {
+        const axis = this.initLinePortNumberAxis(line)
+        const el = d3.select('#topology-portLabel')
+          .attr('transform', 'scale(1)')
+        const elSource = el.append('g')
+        const elTarget = el.append('g')
+        const sourceNumLen = line.sourcePort >= 1220 ? 4 : line.sourcePort - 9 > 0 ? 2 : 1
 
-      const sourceRect = elSource.append('rect')
-        .attr('width', sourceNumLen === 2 ? 20 : sourceNumLen === 1 ? 10 : 40)
-        .attr('height', 20)
-        .attr('x', sourceNumLen === 2 ? axis.source.x - 10 : sourceNumLen === 1 ? axis.source.x - 5 : axis.source.x - 20)
-        .attr('y', axis.source.y - 10)
-        .attr('rx', 5)
-        .attr('ry', 5)
-        .style('stroke', '#969696')
-        .style('stroke-width', 1)
-        .classed('selected', !selected)
-
-      const sourceText = elSource.append('text')
-        .attr('text-anchor', 'right')
-        .attr('x', sourceNumLen === 2 ? axis.source.x - 10 : sourceNumLen === 1 ? axis.source.x - 5 : axis.source.x - 20)
-        .attr('y', axis.source.y)
-        .attr('dy', '0.3em')
-        .text(line.sourcePort)
-        .classed('selected', !selected)
-
-      // 如果出端口小于0表示出端口链接了一台host
-      if (line.type === 'wireless') {
-        const targetNumLen = line.targetPort >= 1220 ? 4 : line.targetPort - 9 > 0 ? 2 : 1
-        const targetRect = elTarget.append('rect')
-          .attr('width', targetNumLen === 2 ? 20 : targetNumLen === 1 ? 10 : 40)
+        const sourceRect = elSource.append('rect')
+          .attr('width', sourceNumLen === 2 ? 20 : sourceNumLen === 1 ? 10 : 40)
           .attr('height', 20)
-          .attr('x', targetNumLen === 2 ? axis.target.x - 10 : targetNumLen === 1 ? axis.target.x - 5 : axis.target.x - 20)
-          .attr('y', axis.target.y - 10)
+          .attr('x', sourceNumLen === 2 ? axis.source.x - 10 : sourceNumLen === 1 ? axis.source.x - 5 : axis.source.x - 20)
+          .attr('y', axis.source.y - 10)
           .attr('rx', 5)
           .attr('ry', 5)
           .style('stroke', '#969696')
           .style('stroke-width', 1)
           .classed('selected', !selected)
 
-        const targetText = elTarget.append('text')
+        const sourceText = elSource.append('text')
           .attr('text-anchor', 'right')
-          .attr('x', targetNumLen === 2 ? axis.target.x - 10 : targetNumLen === 1 ? axis.target.x - 5 : axis.target.x - 20)
-          .attr('y', axis.target.y)
+          .attr('x', sourceNumLen === 2 ? axis.source.x - 10 : sourceNumLen === 1 ? axis.source.x - 5 : axis.source.x - 20)
+          .attr('y', axis.source.y)
           .attr('dy', '0.3em')
-          .text(line.targetPort)
+          .text(line.sourcePort)
           .classed('selected', !selected)
 
-        const { src, dst } = this.linkId(line)
-        sourceRect.attr('id', () => selected ? 'rect-' + src : '').style('fill', () => selected ? '#1AAD8D' : '#FFFFFF')
-        sourceText.attr('id', () => selected ? 'text-' + src : '').style('fill', () => selected ? '#FFFFFF' : '#000000')
-        targetRect.attr('id', () => selected ? 'rect-' + dst : '').style('fill', () => selected ? '#1AAD8D' : '#FFFFFF')
-        targetText.attr('id', () => selected ? 'text-' + dst : '').style('fill', () => selected ? '#FFFFFF' : '#000000')
+        // 如果出端口小于0表示出端口链接了一台host
+        if (line.type === 'wireless') {
+          const targetNumLen = line.targetPort >= 1220 ? 4 : line.targetPort - 9 > 0 ? 2 : 1
+          const targetRect = elTarget.append('rect')
+            .attr('width', targetNumLen === 2 ? 20 : targetNumLen === 1 ? 10 : 40)
+            .attr('height', 20)
+            .attr('x', targetNumLen === 2 ? axis.target.x - 10 : targetNumLen === 1 ? axis.target.x - 5 : axis.target.x - 20)
+            .attr('y', axis.target.y - 10)
+            .attr('rx', 5)
+            .attr('ry', 5)
+            .style('stroke', '#969696')
+            .style('stroke-width', 1)
+            .classed('selected', !selected)
+
+          const targetText = elTarget.append('text')
+            .attr('text-anchor', 'right')
+            .attr('x', targetNumLen === 2 ? axis.target.x - 10 : targetNumLen === 1 ? axis.target.x - 5 : axis.target.x - 20)
+            .attr('y', axis.target.y)
+            .attr('dy', '0.3em')
+            .text(line.targetPort)
+            .classed('selected', !selected)
+
+          sourceRect.attr('id', () => selected ? 'rect-' + src : '').style('fill', () => selected ? '#1AAD8D' : '#FFFFFF')
+          sourceText.attr('id', () => selected ? 'text-' + src : '').style('fill', () => selected ? '#FFFFFF' : '#000000')
+          targetRect.attr('id', () => selected ? 'rect-' + dst : '').style('fill', () => selected ? '#1AAD8D' : '#FFFFFF')
+          targetText.attr('id', () => selected ? 'text-' + dst : '').style('fill', () => selected ? '#FFFFFF' : '#000000')
+        }
       }
     },
 
@@ -615,7 +629,7 @@ export default {
       if (!this.panelCtr) {
         const x = document.getElementById('router')
         const width = x.offsetWidth
-        d3.select('#router').style('right', (0 - width + 10) + 'px')
+        d3.select('#router').style('right', (0 - width) + 'px')
       }
     },
 
@@ -627,7 +641,7 @@ export default {
           let offset = 0
           this.interval.panelInterval = setInterval(() => {
             if (Math.abs(offset) >= width) {
-              d3.select('#router').style('right', (0 - width) + 10 + 'px')
+              d3.select('#router').style('right', (0 - width) + 'px')
               clearInterval(this.interval.panelInterval)
               this.interval.panelInterval = undefined
             } else {
@@ -658,16 +672,21 @@ export default {
       this.transform.y = 0
       d3.select('#topology-zoom').attr('transform', this.transform)
     },
+
     handleRouteSelect(row, column, event) {
       const src = row.src
       const dst = row.dst
       if ((this.selectedPath === src + dst) || (this.selectedPath === dst + src)) {
         d3.selectAll('.path-select').classed('path-select', false)
+        d3.select('#topology-zoom').select('#topology-links-label').selectAll('.linkLabel').classed('node-hidden', true)
         this.removePortNum(true)
+        this.removeLines()
         this.selectedPath = ''
       } else {
         this.selectedPath = src + dst
         const links = []
+        d3.selectAll('.path-select').classed('path-select', false)
+        d3.select('#topology-zoom').select('#topology-links-label').selectAll('.linkLabel').classed('node-hidden', true)
         for (const link of row.links) {
           const srcDeviceId = link.src.key.deviceId
           const srcPort = link.src.key.port
@@ -678,38 +697,154 @@ export default {
             const dSrcPort = d.sourcePort
             const dDstDeviceId = d.target.id
             const dDstPrt = d.targetPort
-            if ((dSrcDeviceId === srcDeviceId && dSrcPort === srcPort && dDstDeviceId === dstDeviceId && dDstPrt === dstPort) || (dSrcDeviceId === dstDeviceId && dSrcPort === dstPort && dDstDeviceId === srcDeviceId && dDstPrt === srcPort)) {
+            if (dSrcDeviceId === srcDeviceId && dSrcPort === srcPort && dDstDeviceId === dstDeviceId && dDstPrt === dstPort) {
+              d3.select('#topology-zoom').select('#topology-links-label').select('#' + this.labelId(d)).classed('node-hidden', false)
+              d3.select('#topology-zoom').select('#topology-links-label').select('#' + this.labelId_reverse(d)).classed('node-hidden', false)
               links.push('#line' + d.index)
+            }
+            if (dSrcDeviceId === dstDeviceId && dSrcPort === dstPort && dDstDeviceId === srcDeviceId && dDstPrt === srcPort) {
+              d3.select('#line' + d.index).classed('path-select', true)
             }
           }
         }
-        d3.selectAll('.path-select').classed('path-select', false)
+
         this.removePortNum(true)
+
+        this.removeLines()
+
         for (const id of links) {
           d3.select(id).classed('path-select', d => {
+            // 用户选择玩路由后页面生成相关节点
+            // 当前path添加class
+            // 生成端口视图
+            // 生成line节点并绑定箭头
             this.showPortNum(d, true)
+            this.showLines(d)
             return true
           })
         }
       }
     },
+
     linkId(link) {
-      const srcDeviceId = link.source.id.replace(/[:.]/g, '-')
-      const dstDeviceId = link.target.id.replace(/[:.]/g, '-')
+      const srcDeviceId = link.source.id ? link.source.id.replace(/[:.]/g, '-') : link.source.replace(/[:.]/g, '-')
+      const dstDeviceId = link.target.id ? link.target.id.replace(/[:.]/g, '-') : link.target.replace(/[:.]/g, '-')
       return {
         src: srcDeviceId + '-' + link.sourcePort,
         dst: dstDeviceId + '-' + link.targetPort
       }
     },
+
     handleTableRow({ row }) {
       if ((this.selectedPath === row.src + row.dst) || (this.selectedPath === row.dst + row.src)) {
         return {
           'background-color': '#1AAD8D!important',
-          'color': 'white'
+          'color': 'white',
+          'border': 0,
+          'margin': 0
         }
       } else {
         return this.style.tableRow
       }
+    },
+
+    lineId(line) {
+      const { src, dst } = this.linkId(line)
+      return src + '-' + dst
+    },
+
+    showLines(line) {
+      const axis = this.getLineAsix(line)
+      d3.select('#topology-lines').append('line')
+        .attr('id', this.lineId(line))
+        .attr('marker-end', 'url(#arrowhead)')
+        .attr('x1', axis.source.x)
+        .attr('y1', axis.source.y)
+        .attr('x2', axis.target.x)
+        .attr('y2', axis.target.y)
+        .style('z-index', 100)
+    },
+
+    removeLines() {
+      d3.select('#topology-lines').selectAll('line').remove()
+    },
+
+    initMarker() {
+      d3.select('#topology-container').select('defs')
+        .append('marker')
+        .attr('id', 'arrowhead')
+        .attr('viewBox', '-0 -5 10 10')
+        .attr('refX', 23)
+        .attr('refY', 0)
+        .attr('orient', 'auto')
+        .attr('markerWidth', 13)
+        .attr('markerHeight', 13)
+        .attr('xoverflow', 'visible')
+        .append('svg:path')
+        .attr('d', 'M 0 -5 L 10 0 L 0 5 Z')
+        .attr('fill', '#127862')
+        .style('stroke', 'none')
+    },
+
+    labelId(line) {
+      const { src, dst } = this.linkId(line)
+      return 'label' + src + '-' + dst
+    },
+
+    labelId_reverse(line) {
+      const { src, dst } = this.linkId(line)
+      return 'label' + dst + '-' + src
+    },
+
+    testAddLink() {
+      this.links.push({
+        source: {
+          id: 'device:10.10.10.12',
+          type: 'switch',
+          status: true,
+          index: 2
+        },
+        sourcePort: 30,
+        target: {
+          id: 'device:10.10.10.17',
+          type: 'switch',
+          status: true,
+          index: 7
+        },
+        targetPort: 30,
+        type: 'wireless',
+        detail: {
+          index: 1,
+          total: 2
+        }
+      })
+      this.links.push({
+        target: {
+          id: 'device:10.10.10.12',
+          type: 'switch',
+          status: true,
+          index: 2
+        },
+        targetPort: 30,
+        source: {
+          id: 'device:10.10.10.17',
+          type: 'switch',
+          status: true,
+          index: 7
+        },
+        sourcePort: 30,
+        type: 'wireless',
+        detail: {
+          index: 1,
+          total: 2
+        }
+      })
+
+      this.simulation.force('link').links(this.links)
+
+      this.simulation.restart()
+      this.simulation.tick()
+      console.log('links: ', JSON.stringify(this.links))
     }
   }
 }
@@ -733,29 +868,37 @@ export default {
   }
   .menu-net {
     background-color: #acd2ca;
-    /*border: 2px solid #127862;*/
-    border-radius: .5em;
-    border-width: 6px 2px 3px;
-    margin-bottom: 2em;
-    padding: .5em 1em;
+    border: 2px solid #127862;
+    /*border-radius: .5em;*/
+    /*border-width: 6px 2px 3px;*/
+    /*margin-bottom: 2em;*/
+    /*padding: .5em 1em;*/
     position: relative;
   }
-  .tools {
-    bottom: 3em;
+  .menu-box {
+    bottom: 0;
+    left: 0;
+    /*padding: 1em;*/
     position: absolute;
-    right: 4em;
+    z-index: 102;
+  }
+  .tools {
+    /*bottom: 3em;*/
+    /*position: absolute;*/
+    /*right: 4em;*/
     text-align: center;
-    z-index: 101;
+    /*z-index: 101;*/
   }
   .tools ul button {
-    height: 3em;
-    padding: 0;
-    width: 3em;
+    /*height: 3em;*/
+    /*padding: 0;*/
+    /*width: 3em;*/
   }
   .tools ul {
     display: block;
     list-style: none;
-    margin: 0 3em 0.5em 0;
+    /*margin: 0 3em 0.5em 0;*/
+    margin: .5em auto;
     padding: 0;
   }
   .tools ul li {
@@ -781,6 +924,14 @@ export default {
   }
   .el-table .el-table__body-wrapper .customHover:hover>td {
     background: none!important;
+  }
+  .el-table .el-table__body-wrapper .customHover>td {
+    padding: 0;
+    margin: 0;
+    white-space: nowrap;
+  }
+  .node-hidden {
+    display: none;
   }
 </style>
 <style scoped>

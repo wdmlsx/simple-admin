@@ -135,14 +135,14 @@ export const asyncRoutes = [
     ]
   },
   {
-    path: '/topology',
+    path: '/topology-old',
     component: Layout,
     children: [
       {
         path: 'index',
         component: () => import('@/views/jd/d3/topology'),
-        name: 'Topology',
-        meta: { title: 'Topology', icon: 'theme' }
+        name: 'Topology-old',
+        meta: { title: 'Topology-old', icon: 'theme' }
       }
     ]
   },
@@ -155,6 +155,18 @@ export const asyncRoutes = [
         component: () => import('@/views/jd/device/index'),
         name: 'DeviceLink',
         meta: { title: 'DeviceManager', icon: 'theme' }
+      }
+    ]
+  },
+  {
+    path: '/topology',
+    component: Layout,
+    children: [
+      {
+        path: 'index',
+        component: () => import('@/views/jd/topology/index'),
+        name: 'TopologyLink',
+        meta: { title: 'Topology', icon: 'theme' }
       }
     ]
   },
